@@ -1,12 +1,12 @@
+### Kube Installer Sketch
 
-This is an installer for Kubernetes.
+Sketch of a Kubernetes installer.
 
-It is Kubespray with a few minor configurations and alterations.
+It's Kubespray with a few minor configurations and alterations.
 
-Directory layout:
+Layout:
 ```
 ├── ansible.cfg
-├── archive
 ├── configure
 ├── create-dashboard
 ├── get-token
@@ -16,9 +16,59 @@ Directory layout:
 ├── requirements.txt
 └── venv
 ```
-Changes:
+### Changes:
 
-In ansible.cfg, we set the remote temp dir to be rooted in /tmp. This is likely unnecessary. A permissions issue addressed elsewhere may have been causing the problem that drove this change.
+#### Turn off override_system_hostname
 
+Not necessary or [helpful](https://github.com/kubernetes-sigs/kubespray/issues/4787) for kubespray to change hostnames.
+
+#### Populating inventory to etc/hosts
+
+This messes up /etc/hosts by putting stuff in the wrong order. Really don't want that.
+```
+populate_inventory_to_hosts_file: false
+```
+in kubespray/roles/kubernetes/preinstall/defaults/main.yml
+
+### Other Details of the Install
+
+#### Remote Tmp
+
+Set remote temp path in ansible.conf (maybe only needed because of iii)
+```
 remote_tmp = /tmp/.ansible-${USER}/tmp
+```
 
+#### Home Dir Permissions
+
+This has nothing to do with Kubespray. But an authentication or permission failure was fixed by:
+```
+for x in {0..8}; do ssh stars-k$x.edc.renci.org "sudo chown -R $USER ~"; done
+````
+
+### After the Install
+
+#### The Dashboard
+
+After the install ....
+```
+kubectl create serviceaccount kubernetes-dashboard
+kubectl create -f /projects/stars/stack/k8s/dashboard-cluster-role-binding.yaml 
+kubectl get serviceaccounts kubernetes-dashboard -o yaml
+kubectl get secret kubernetes-dashboard-token-tcmqh -o yaml
+kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
+```
+
+#### A Note on Calico and iptables
+
+iptables v1.4.21 vs min required == 1.4.7
+Also, maximum known working version is 1.6
+
+
+#### Helm
+
+```
+kubectl --kubeconfig=renci-translator create serviceaccount --namespace kube-system tiller
+kubectl --kubeconfig=renci-translator create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+kubectl --kubeconfig=renci-translator patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+```
