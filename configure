@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -x
+set -e
+
+cluster_name=stars-k8s
+cluster_size=9 # total number of nodes.
+
+k8s_home=/projects/stars/stack/k8s
+cd $k8s_home
+source venv/k8s/bin/activate
+
+cd kubespray
+# Install dependencies from ``requirements.txt``
+pip install -r requirements.txt
+
+# Copy ``inventory/sample`` as ``inventory/mycluster``
+mkdir -p inventory/$cluster_name
+cp -rfp inventory/sample/* inventory/$cluster_name
+
+export HOST_PREFIX=stars-k
+export HOST_SUFFIX=.edc.renci.org
+export CONFIG_FILE=inventory/$cluster_name/hosts.ini
+rm -rf $CONFIG_FILE
+
+python3 contrib/inventory_builder/inventory.py 172.25.16.20-172.25.16.28
+
+# Review and change parameters under ``inventory/$cluster_name/group_vars``
+ls -lisa inventory/$cluster_name/group_vars/all/all.yml
+ls -lisa inventory/$cluster_name/group_vars/k8s-cluster/k8s-cluster.yml
+
+# Deploy Kubespray with Ansible Playbook - run the playbook as root
+# The option `-b` is required, as for example writing SSL keys in /etc/,
+# installing packages and interacting with various systemd daemons.
+# Without -b the playbook will fail to run!
+mv inventory/$cluster_name/hosts.ini inventory/$cluster_name/hosts.yaml
+ansible-playbook -i inventory/$cluster_name/hosts.yaml --become --become-user=root cluster.yml
+
+exit 0

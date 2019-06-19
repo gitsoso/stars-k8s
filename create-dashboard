@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -x
+
+kubectl create serviceaccount kubernetes-dashboard
+kubectl create -f /projects/stars/stack/k8s/dashboard-cluster-role-binding.yaml 
+kubectl get serviceaccounts kubernetes-dashboard -o yaml
+kubectl get secret kubernetes-dashboard-token-tcmqh -o yaml
+kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
+
+
+exit 0
