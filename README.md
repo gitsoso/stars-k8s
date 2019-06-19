@@ -4,7 +4,7 @@ This is an installer for Kubernetes.
 It is Kubespray with a few minor configurations and alterations.
 
 Directory layout:
-
+```
 ├── ansible.cfg
 ├── archive
 ├── configure
@@ -15,7 +15,7 @@ Directory layout:
 ├── README
 ├── requirements.txt
 └── venv
-
+```
 Changes:
 
 In ansible.cfg, we set the remote temp dir to be rooted in /tmp. This is likely unnecessary. A permissions issue addressed elsewhere may have been causing the problem that drove this change.
